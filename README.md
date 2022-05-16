@@ -9,7 +9,7 @@ The bot starts off by connecting to AWS S3 to download an excel file, extract th
 ```mermaid
 graph TD
     A[AWS S3] -->|Download 'Review Cases.xlsx'| B[Excel]
-    B -->|Extract the case number and <br>send to Salesforce| C(Salesforce)
+    B -->|Extract the case number and <br>send to Salesforce <br> <br>Steps after the Excel step are <br>are executed in parallel as Work Items| C(Salesforce)
     C -->|Find the Case Contact Name's <br>Mailing Address and look up <br>property address| D[www.google.com/maps]
     D -->|Add maps screenshot as a FeedItem| C
     C -->|Once case FeedItem has been updated <br>send message to Teams channel| E[Teams]
