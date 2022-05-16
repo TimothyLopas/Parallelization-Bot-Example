@@ -1,0 +1,16 @@
+tasks:
+  Producer Tasks:
+    shell: python -m robot --report NONE --outputdir output --logtitle "Task log" producer-tasks.robot
+  Consumer Tasks:
+    shell: python -m robot --report NONE --outputdir output --logtitle "Task log" consumer-tasks.robot
+  Clear Salesforce:
+    shell: python -m robot --report NONE --outputdir output --logtitle "Task log" ClearSalesforce.robot
+
+condaConfigFile: conda.yaml
+artifactsDir: output
+PATH:
+  - .
+PYTHONPATH:
+  - .
+ignoreFiles:
+  - .gitignore
