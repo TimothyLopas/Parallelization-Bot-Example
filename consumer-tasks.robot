@@ -1,7 +1,8 @@
 *** Settings ***
 Documentation       Template robot main suite.
 
-Library             RPA.Browser.Playwright    timeout=00:00:30    auto_closing_level=SUITE    run_on_failure=Take Screenshot \ EMBED
+Library             RPA.Browser.Playwright    timeout=30s    auto_closing_level=SUITE
+...                 run_on_failure=Take Screenshot \ EMBED
 Library             RPA.Robocorp.Vault
 Library             RPA.Cloud.AWS
 Library             RPA.Salesforce
@@ -33,12 +34,13 @@ Authenticate to Salesforce
 
 Open Google Maps webpage
     New Browser    headless=${FALSE}
+    New context
     New Page    https://www.google.com/maps
 
 Collect property tax details, append to Salesforce case and send Teams message
     Open Google Maps webpage
     # ${case_payload}=    Get Work Item Payload
-    ${case}=    Get Work Item Variable    CaseNumber
+    ${case}=    Get Work Item Variable    case_number
     ${secret}=    Get Secret    salesforce
     ${base_url}=    Set Variable    ${secret}[base_url]
     ${valid_case}=    Set Variable    ${FALSE}
@@ -46,48 +48,42 @@ Collect property tax details, append to Salesforce case and send Teams message
     ${case}=    Convert To String    ${case}
     ${case_length}=    Get Length    ${case}
     IF    ${case_length} < ${8}
-        IF    ${case_length} == ${1}
-            ${case}=    Set Variable    0000000${case}
-            ${valid_case}=    Set Variable    ${TRUE}
-        ELSE IF    ${case_length} == ${2}
-            ${case}=    Set Variable    000000${case}
-            ${valid_case}=    Set Variable    ${TRUE}
-        ELSE IF    ${case_length} == ${3}
-            ${case}=    Set Variable    00000${case}
-            ${valid_case}=    Set Variable    ${TRUE}
-        ELSE IF    ${case_length} == ${4}
-            ${case}=    Set Variable    0000${case}
-            ${valid_case}=    Set Variable    ${TRUE}
-        ELSE IF    ${case_length} == ${5}
-            ${case}=    Set Variable    000${case}
-            ${valid_case}=    Set Variable    ${TRUE}
-        ELSE IF    ${case_length} == ${6}
-            ${case}=    Set Variable    00${case}
-            ${valid_case}=    Set Variable    ${TRUE}
-        ELSE IF    ${case_length} == ${7}
-            ${case}=    Set Variable    0${case}
-            ${valid_case}=    Set Variable    ${TRUE}
-        END
+        ${case}=    Format string    {0:08d}    ${case}
+        ${valid_case}=    Set Variable    ${TRUE}
     END
 
+    # You could structure this with TRY...EXCEPT...ELSE...FINALLY whereby
+    # you don't check for validity, you just try to submit to sfdc first off
+    # and then you catch the SFDC error and then release input work items
+    # with your exception message.
     IF    ${valid_case}
         ${address}    ${case_id}=    Find mailing address from case number    ${case}
         ${valid}=    Validate Address Structure    ${address}
         IF    ${valid}
-            Search For propery    ${address}
+            Search for property    ${address}
             Append property image to case notes    ${address}    ${case_id}
-            ${teams_message}=    Set Variable
-            ...    Case ${case} has been updated on SalesForce: https://${base_url}.lightning.force.com/lightning/r/Case/${case_id}/view
+            ${teams_message}=    Catenate
+            ...    Case ${case} has been updated on SalesForce:
+            ...    https://${base_url}.lightning.force.com/lightning/r/Case/${case_id}/view
             Run Keyword And Warn On Failure    Send Message To Sfdc Messages Channel    ${teams_message}
 
             Release Input Work Item
             ...    DONE
+            # This path would be in the "ELSE" block
         ELSE
             Release Input Work Item
             ...    FAILED
             ...    exception_type=BUSINESS
             ...    code=INVALID_ADDRESS_STRUCTURE
             ...    message=The address (${address}) is invalid. Correct in Salesforce first, then rerun.
+            # This path would be in an "EXCEPT" block. If you caught the exception into a variable
+            # by writing your EXCEPT block like:
+            #
+            # EXCEPT    exception message    AS    ${e}
+            #
+            # You could pass ${e} as the message to control room.. but then you have to figure out
+            # what exception messages SFDC returns and catch it because the EXCEPT matches on
+            # string only (you can use glob patterns to make it easier to catch).
         END
     ELSE
         Release Input Work Item
@@ -95,8 +91,10 @@ Collect property tax details, append to Salesforce case and send Teams message
         ...    exception_type=APPLICATION
         ...    code=CASE_LENGTH_ERROR
         ...    message=Case length is not valid and cannot be passed into Salesforce.
+        # This path would be in an "EXCEPT" block
     END
 
+    # This would be in the "FINALLY" block.
     Close Browser
 
 Find mailing address from case number
@@ -110,51 +108,30 @@ Find mailing address from case number
     ...    Salesforce Query Result As Table
     ...    SELECT Id, MailingAddress FROM Contact WHERE Id = '${contact_id}'
     ${mailing_address_dict}=    Set Variable    ${contact_query}[0][1]
-    ${mailing_address}=    Set Variable
-    ...    ${mailing_address_dict}[street]${SPACE}${mailing_address_dict}[city],${SPACE}${mailing_address_dict}[state]${SPACE}${mailing_address_dict}[postalCode]
+    ${mailing_address}=    Catenate
+    ...    ${mailing_address_dict}[street]
+    ...    ${mailing_address_dict}[city], ${mailing_address_dict}[state]
+    ...    ${mailing_address_dict}[postalCode]
     RETURN    ${mailing_address}    ${case_id}
 
 Validate Address Structure
     [Arguments]    ${address}
-    ${valid}=    Set Variable    ${TRUE}
-    ${address_characters}=    Split String To Characters    ${address}
 
-    ${first_char}=    Set Variable    ${address_characters}[0]
-    ${last_char}=    Set Variable    ${address_characters}[-1]
-
-    ${first_char_alpha}=    Evaluate    $first_char.isalpha()
-    ${last_char_alpha}=    Evaluate    $first_char.isalpha()
-
-    IF    ${first_char_alpha}
-        ${valid}=    Set Variable    ${FALSE}
-    END
-    IF    ${last_char_alpha}
-        ${valid}=    Set Variable    ${FALSE}
+    TRY
+        Should match regexp    ${address}    ^\\d+[^?/\\\\!@]+\\d+$
+    EXCEPT
+        RETURN    ${FALSE}
+    ELSE
+        RETURN    ${TRUE}
     END
 
-    FOR    ${char}    IN    @{address_characters}
-        IF    "${char}" == "?"
-            ${valid}=    Set Variable    ${FALSE}
-        ELSE IF    "${char}" == "/"
-            ${valid}=    Set Variable    ${FALSE}
-        ELSE IF    "${char}" == "\"
-            ${valid}=    Set Variable    ${FALSE}
-        ELSE IF    "${char}" == "!"
-            ${valid}=    Set Variable    ${FALSE}
-        ELSE IF    "${char}" == "@"
-            ${valid}=    Set Variable    ${FALSE}
-        END
-    END
-
-    RETURN    ${valid}
-
-Search for propery
+Search for property
     [Arguments]    ${address}
     ${address_upper}=    Convert To Upper Case    ${address}
     ${address_filename}=    Replace String    ${address_upper}    ${SPACE}    _
     Fill Text    id=searchboxinput    ${address_upper}
     Keyboard Key    press    Enter
-    Sleep    5
+    Sleep    5    # would be nice to replace this with a `wait for an elements state`
     Take Screenshot    ${OUTPUT_DIR}${/}${address_filename}    fileType=jpeg    quality=10    fullPage=False
 
 Append property image to case notes
@@ -183,4 +160,4 @@ Append property image to case notes
     ...    FeedEntityID=${caseFeed}[id]
     ...    RecordId=${contentVersion}[id]
     Create Salesforce Object    FeedAttachment    ${caseAttachment_data}
-    Log    Case Notes Updated
+    Log    Case Notes Updated    console=${TRUE}
