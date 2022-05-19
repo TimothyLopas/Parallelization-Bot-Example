@@ -1,5 +1,8 @@
 *** Settings ***
-Documentation       Template robot main suite.
+Documentation       This is the consumer portion of the bot. This bot will take each Work Item created in the producer portion of the bot
+...                 and extract the case number from it. That case number will be looked up in Salesforce and the associated contact's mailing address
+...                 will be extracted. The address will go through light validation and then be sent to Google Maps. The Google Maps screenshot will
+...                 then be attached to the Salesforce Case and a Teams message will be sent informing a channel of the Case updates.
 
 Library             RPA.Browser.Playwright    timeout=00:00:30    auto_closing_level=SUITE    run_on_failure=Take Screenshot \ EMBED
 Library             RPA.Robocorp.Vault
