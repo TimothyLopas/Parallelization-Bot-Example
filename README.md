@@ -19,6 +19,10 @@ flowchart LR
     end
 ```
 
+# Free Tier Disclaimer
+
+In order to run items in parallel in Control Room you will need to be on a paid tier. Work Items will still work and can still be designed on the free tier but each Work Item will run sequentially because you are limited to a concurrency of 1. Even if you setup your own Environment Group you will still be limited to one concurrent execution.
+
 # Prerequisites
 
 1. Set up a free AWS S3 account at [AWS Free Tier](https://aws.amazon.com/free/?all-free-tier.sort-by=item.additionalFields.SortRank&all-free-tier.sort-order=asc&awsf.Free%20Tier%20Types=*all&awsf.Free%20Tier%20Categories=*all)
