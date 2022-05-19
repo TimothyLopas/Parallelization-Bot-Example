@@ -87,7 +87,7 @@ Collect property tax details, append to Salesforce case and send Teams message
             ...    FAILED
             ...    exception_type=BUSINESS
             ...    code=INVALID_ADDRESS_STRUCTURE
-            ...    message=The address is invalid. Correct in Salesforce first, then rerun.
+            ...    message=The address (${address}) is invalid. Correct in Salesforce first, then rerun.
         END
     ELSE
         Release Input Work Item
