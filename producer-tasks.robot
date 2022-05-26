@@ -5,7 +5,7 @@ Documentation       This is the producer portion of the bot. This bot will downl
 ...                 This Work Item will be recalled and used as an input in the next step; the consumer portion of the bot.
 
 Library             RPA.Robocorp.Vault
-Library             RPA.Cloud.AWS
+Library             RPA.Cloud.AWS    robocloud_vault_name=aws
 Library             RPA.Excel.Files
 Library             RPA.Tables
 Library             RPA.Robocorp.WorkItems
@@ -14,24 +14,18 @@ Library             RPA.Robocorp.WorkItems
 *** Variables ***
 ${CASE_FILE_NAME}=          Producer-Consumer_Cases.xlsx
 ${AWS_DOWNLOAD_BUCKET}=     robocorp-test
+${AWS_PATH}=                Producer-Consumer
 
 
 *** Tasks ***
 Collect cases and append property tax details
     Init s3 client    use_robocloud_vault=${TRUE}
-    Download file from S3 bucket    ${AWS_DOWNLOAD_BUCKET}    ${OUTPUT_DIR}${/}${CASE_FILE_NAME}
+    Download file from S3 bucket    ${AWS_DOWNLOAD_BUCKET}    ${AWS_PATH}${/}${CASE_FILE_NAME}
     ${cases}=    Open Excel file and extract cases
     Create Case Work Items    ${cases}
 
 
 *** Keywords ***
-Authenticate to S3
-    ${secret}=    Get Secret    aws
-    Init S3 Client
-    ...    ${secret}[AWS_KEY_ID]
-    ...    ${secret}[AWS_KEY]
-    ...    ${secret}[AWS_REGION]
-
 Download file from S3 bucket
     [Arguments]    ${bucket_name}    ${file_name}
     @{file_list}=    Create List    ${file_name}
