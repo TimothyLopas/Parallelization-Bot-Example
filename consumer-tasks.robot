@@ -22,7 +22,6 @@ Collect cases and append property tax details
     Authenticate to Salesforce
     For Each Input Work Item
     ...    Collect property tax details, append to Salesforce case and send Teams message
-    ...    items_limit=10
 
 
 
