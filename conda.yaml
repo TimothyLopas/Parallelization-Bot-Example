@@ -13,8 +13,8 @@ dependencies:
   - pip:
       # Define pip packages here.
       # https://pypi.org/
-      - robotframework-browser==12.3.0
-      - rpaframework[aws]==13.0.2 # https://rpaframework.org/releasenotes.html
+      - robotframework-browser==12.4.0
+      - rpaframework[aws]==14.1.1 # https://rpaframework.org/releasenotes.html
       - pymsteams==0.2.1
 
 rccPostInstall:
