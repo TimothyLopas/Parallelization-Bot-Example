@@ -68,20 +68,38 @@ Collect property tax details, append to Salesforce case and send Teams message
         ...    code=INVALID_ADDRESS_STRUCTURE
         ...    message=The address (${address}) is invalid. Correct in Salesforce first, then rerun.
         RETURN
-    ELSE
-        Search for property    ${address}
-        Append property image to case notes    ${address}    ${case_id}
-        ${teams_message}=    Catenate
-        ...    Case ${case} has been updated on SalesForce:
-        ...    https://${base_url}.lightning.force.com/lightning/r/Case/${case_id}/view
     END
-
     TRY
-        Send Message To Sfdc Messages Channel    ${teams_message}
+        Search for property    ${address}
     EXCEPT
         Release Input Work Item
         ...    FAILED
         ...    exception_type=BUSINESS
+        ...    code=INVALID_ADDRESS
+        ...    message=The address (${address}) is invalid. Please contact the customer to confirm and update in Salesforce.
+        RETURN
+    END
+
+    TRY
+        Append property image to case notes    ${address}    ${case_id}
+    EXCEPT
+        Release Input Work Item
+        ...    FAILED
+        ...    exception_type=APPLICATION
+        ...    code=INVALID_ADDRESS
+        ...    message=Salesforce failed to attach the image to the case.
+        RETURN
+    END
+
+    TRY
+        ${teams_message}=    Catenate
+        ...    Case ${case} has been updated on SalesForce:
+        ...    https://${base_url}.lightning.force.com/lightning/r/Case/${case_id}/view
+        Send Message To Sfdc Messages Channel    ${teams_message}
+    EXCEPT
+        Release Input Work Item
+        ...    FAILED
+        ...    exception_type=APPLICATION
         ...    code=TEAMS_SEND_ERROR
         ...    message=Teams failed to receive the messgae properly
     ELSE
