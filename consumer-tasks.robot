@@ -24,7 +24,6 @@ Collect cases and append property tax details
     ...    Collect property tax details, append to Salesforce case and send Teams message
 
 
-
 *** Keywords ***
 Authenticate to Salesforce
     ${sf_secret}=    Get Secret    salesforce
@@ -83,8 +82,8 @@ Collect property tax details, append to Salesforce case and send Teams message
         Release Input Work Item
         ...    FAILED
         ...    exception_type=BUSINESS
-        ...    code=INVALID_ADDRESS_STRUCTURE
-        ...    message=The address (${address}) is invalid. Correct in Salesforce first, then rerun.
+        ...    code=TEAMS_SEND_ERROR
+        ...    message=Teams failed to receive the messgae properly
     ELSE
         Release Input Work Item
         ...    DONE
