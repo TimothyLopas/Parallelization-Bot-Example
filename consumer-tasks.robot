@@ -7,7 +7,7 @@ Documentation       This is the consumer portion of the bot. This bot will take 
 Library             RPA.Browser.Playwright    timeout=30s    auto_closing_level=SUITE
 ...                 run_on_failure=Take Screenshot \ EMBED
 Library             RPA.Robocorp.Vault
-Library             RPA.Cloud.AWS
+Library             RPA.Cloud.AWS    robocloud_vault_name=aws
 Library             RPA.Salesforce
 Library             TeamsMessages.py
 Library             RPA.Excel.Files
@@ -18,31 +18,26 @@ Library             RPA.Robocorp.WorkItems
 
 *** Tasks ***
 Collect cases and append property tax details
-    Authenticate to S3
+    Init s3 client    use_robocloud_vault=${TRUE}
     Authenticate to Salesforce
-    For Each Input Work Item    Collect property tax details, append to Salesforce case and send Teams message
+    For Each Input Work Item
+    ...    Collect property tax details, append to Salesforce case and send Teams message
+    ...    items_limit=10
+
 
 
 *** Keywords ***
-Authenticate to S3
-    ${secret}=    Get Secret    aws
-    Init S3 Client
-    ...    ${secret}[AWS_KEY_ID]
-    ...    ${secret}[AWS_KEY]
-    ...    ${secret}[AWS_REGION]
-
 Authenticate to Salesforce
     ${sf_secret}=    Get Secret    salesforce
     Auth With Token    ${sf_secret}[api_username]    ${sf_secret}[api_password]    ${sf_secret}[api_token]
 
 Open Google Maps webpage
     New Browser    headless=${FALSE}
-    New context
+    New Context
     New Page    https://www.google.com/maps
 
 Collect property tax details, append to Salesforce case and send Teams message
     Open Google Maps webpage
-    # ${case_payload}=    Get Work Item Payload
     ${case}=    Get Work Item Variable    case_number
     ${secret}=    Get Secret    salesforce
     ${base_url}=    Set Variable    ${secret}[base_url]
@@ -51,54 +46,52 @@ Collect property tax details, append to Salesforce case and send Teams message
     ${case}=    Convert To String    ${case}
     ${case_length}=    Get Length    ${case}
     IF    ${case_length} < ${8}
-        ${case}=    Format string    {0:08d}    ${case}
-        ${valid_case}=    Set Variable    ${TRUE}
+        ${case_as_int}=    Convert To Integer    ${case}
+        ${case}=    Format string    {0:08d}    ${case_as_int}
     END
 
-    # You could structure this with TRY...EXCEPT...ELSE...FINALLY whereby
-    # you don't check for validity, you just try to submit to sfdc first off
-    # and then you catch the SFDC error and then release input work items
-    # with your exception message.
-    IF    ${valid_case}
+    TRY
         ${address}    ${case_id}=    Find mailing address from case number    ${case}
-        ${valid}=    Validate Address Structure    ${address}
-        IF    ${valid}
-            Search for property    ${address}
-            Append property image to case notes    ${address}    ${case_id}
-            ${teams_message}=    Catenate
-            ...    Case ${case} has been updated on SalesForce:
-            ...    https://${base_url}.lightning.force.com/lightning/r/Case/${case_id}/view
-            Run Keyword And Warn On Failure    Send Message To Sfdc Messages Channel    ${teams_message}
-
-            Release Input Work Item
-            ...    DONE
-            # This path would be in the "ELSE" block
-        ELSE
-            Release Input Work Item
-            ...    FAILED
-            ...    exception_type=BUSINESS
-            ...    code=INVALID_ADDRESS_STRUCTURE
-            ...    message=The address (${address}) is invalid. Correct in Salesforce first, then rerun.
-            # This path would be in an "EXCEPT" block. If you caught the exception into a variable
-            # by writing your EXCEPT block like:
-            #
-            # EXCEPT    exception message    AS    ${e}
-            #
-            # You could pass ${e} as the message to control room.. but then you have to figure out
-            # what exception messages SFDC returns and catch it because the EXCEPT matches on
-            # string only (you can use glob patterns to make it easier to catch).
-        END
-    ELSE
+    EXCEPT
         Release Input Work Item
         ...    FAILED
         ...    exception_type=APPLICATION
         ...    code=CASE_LENGTH_ERROR
         ...    message=Case length is not valid and cannot be passed into Salesforce.
-        # This path would be in an "EXCEPT" block
+        RETURN
     END
 
-    # This would be in the "FINALLY" block.
-    Close Browser
+    TRY
+        Should match regexp    ${address}    ^\\d+[^?/\\\\!@\\*\=]+\\d+$
+    EXCEPT
+        Release Input Work Item
+        ...    FAILED
+        ...    exception_type=BUSINESS
+        ...    code=INVALID_ADDRESS_STRUCTURE
+        ...    message=The address (${address}) is invalid. Correct in Salesforce first, then rerun.
+        RETURN
+    ELSE
+        Search for property    ${address}
+        Append property image to case notes    ${address}    ${case_id}
+        ${teams_message}=    Catenate
+        ...    Case ${case} has been updated on SalesForce:
+        ...    https://${base_url}.lightning.force.com/lightning/r/Case/${case_id}/view
+    END
+
+    TRY
+        Send Message To Sfdc Messages Channel    ${teams_message}
+    EXCEPT
+        Release Input Work Item
+        ...    FAILED
+        ...    exception_type=BUSINESS
+        ...    code=INVALID_ADDRESS_STRUCTURE
+        ...    message=The address (${address}) is invalid. Correct in Salesforce first, then rerun.
+    ELSE
+        Release Input Work Item
+        ...    DONE
+    FINALLY
+        Close Browser
+    END
 
 Find mailing address from case number
     [Arguments]    ${case_number}
@@ -117,24 +110,14 @@ Find mailing address from case number
     ...    ${mailing_address_dict}[postalCode]
     RETURN    ${mailing_address}    ${case_id}
 
-Validate Address Structure
-    [Arguments]    ${address}
-
-    TRY
-        Should match regexp    ${address}    ^\\d+[^?/\\\\!@]+\\d+$
-    EXCEPT
-        RETURN    ${FALSE}
-    ELSE
-        RETURN    ${TRUE}
-    END
-
 Search for property
     [Arguments]    ${address}
     ${address_upper}=    Convert To Upper Case    ${address}
     ${address_filename}=    Replace String    ${address_upper}    ${SPACE}    _
+    Wait Until Network Is Idle    timeout=10s
     Fill Text    id=searchboxinput    ${address_upper}
     Keyboard Key    press    Enter
-    Sleep    5    # would be nice to replace this with a `wait for an elements state`
+    Wait For Elements State    xpath=//button[@class="S9kvJb"][@data-value="Directions"]
     Take Screenshot    ${OUTPUT_DIR}${/}${address_filename}    fileType=jpeg    quality=10    fullPage=False
 
 Append property image to case notes
