@@ -105,9 +105,8 @@ Collect property tax details, append to Salesforce case and send Teams message
     ELSE
         Release Input Work Item
         ...    DONE
-    FINALLY
-        Close Browser
     END
+    [Teardown]    Close Browser
 
 Find mailing address from case number
     [Arguments]    ${case_number}
