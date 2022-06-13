@@ -39,8 +39,20 @@ Open excel file and extract cases
     RETURN    ${cases_column}
 
 Create Case Work Items
+    [Documentation]    This is how you would create a work item using
+    ...    just the Create Output Work Item keyword
     [Arguments]    ${cases}
     FOR    ${case}    IN    @{cases}
         &{case_variables}=    Create Dictionary    case_number=${case}
         Create Output Work Item    variables=${case_variables}    save=${TRUE}
+    END
+
+Create case work items using distinct keywords
+    [Documentation]    This is an alternative way in which you could create the
+    ...    output work items using all three keywords separately
+    [Arguments]    ${cases}
+    FOR    ${case}    IN    @{cases}
+        Create Output Work Item
+        Set Work Item Variables    case_number=${case}
+        Save Work Item
     END
