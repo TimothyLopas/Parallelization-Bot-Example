@@ -5,7 +5,7 @@ Documentation       This is the consumer portion of the bot. This bot will take 
 ...                 then be attached to the Salesforce Case and a Teams message will be sent informing a channel of the Case updates.
 
 Library             RPA.Browser.Playwright    timeout=30s    auto_closing_level=SUITE
-...                 run_on_failure=Take Screenshot \ EMBED
+...                     run_on_failure=Take Screenshot \ EMBED
 Library             RPA.Robocorp.Vault
 Library             RPA.Cloud.AWS    robocloud_vault_name=aws
 Library             RPA.Salesforce
@@ -34,8 +34,12 @@ Open Google Maps webpage
     New Context
     New Page    https://www.google.com/maps
 
+Accept Cookies
+    Click    xpath=//button[text()="Accept All"]
+
 Collect property tax details, append to Salesforce case and send Teams message
     Open Google Maps webpage
+    Run Keyword And Continue On Failure    Accept Cookies
     ${case}=    Get Work Item Variable    case_number
     ${secret}=    Get Secret    salesforce
     ${base_url}=    Set Variable    ${secret}[base_url]
