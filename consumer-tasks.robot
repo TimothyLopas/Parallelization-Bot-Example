@@ -35,7 +35,7 @@ Open Google Maps webpage
     New Page    https://www.google.com/maps
 
 Accept Cookies
-    ${element}=    Get Element    xpath=//button[@aria-label="Reject all"][text()="Reject allAccept all"]
+    ${element}=    Get Element    xpath=//div[@class="AIC7ge"]//button[@aria-label="Reject all"]
     Log    ${element}
     Click    ${element}
 
