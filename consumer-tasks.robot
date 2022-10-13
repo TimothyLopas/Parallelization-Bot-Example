@@ -35,9 +35,9 @@ Open Google Maps webpage
     New Page    https://www.google.com/maps
 
 Accept Cookies
-    ${element}=    Get Element    xpath=//div[@class="VfPpkd-RLmnJb"]
+    ${element}=    Get Element    xpath=//div[@class="VfPpkd-RLmnJb"][aria-label="Accept all"]
     Log    ${element}
-    Click    xpath=//button[text()="Accept all"]
+    Click    ${element}
 
 Collect property tax details, append to Salesforce case and send Teams message
     Open Google Maps webpage
