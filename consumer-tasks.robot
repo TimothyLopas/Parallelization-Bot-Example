@@ -35,7 +35,7 @@ Open Google Maps webpage
     New Page    https://www.google.com/maps
 
 Accept Cookies
-    ${element}=    Get Element    xpath=//div[@class="VfPpkd-RLmnJb"][aria-label="Accept all"]
+    ${element}=    Get Element    xpath=//div[@class="VfPpkd-RLmnJb"] >> [aria-label="Accept all"]
     Log    ${element}
     Click    ${element}
 
