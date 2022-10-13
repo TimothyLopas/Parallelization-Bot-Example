@@ -20,7 +20,7 @@ ${AWS_PATH}=                Producer-Consumer
 *** Tasks ***
 Collect cases and append property tax details
     Init s3 client    use_robocloud_vault=${TRUE}
-    Download file from S3 bucket    ${AWS_DOWNLOAD_BUCKET}    ${AWS_PATH}${/}${CASE_FILE_NAME}
+    Download file from S3 bucket    ${AWS_DOWNLOAD_BUCKET}    ${AWS_PATH}/${CASE_FILE_NAME}
     ${cases}=    Open Excel file and extract cases
     Create Case Work Items    ${cases}
 
