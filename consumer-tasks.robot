@@ -126,9 +126,9 @@ Find mailing address from case number
     ...    SELECT Id, MailingAddress FROM Contact WHERE Id = '${contact_id}'
     ${mailing_address_dict}=    Set Variable    ${contact_query}[0][1]
     ${mailing_address}=    Catenate
-    ...    ${mailing_address_dict}[street]
-    ...    ${mailing_address_dict}[city], ${mailing_address_dict}[state]
-    ...    ${mailing_address_dict}[postalCode]
+    ...    ${contact_query}[0][8]
+    ...    ${contact_query}[0][1], ${contact_query}[0][7]
+    ...    ${contact_query}[0][6]
     RETURN    ${mailing_address}    ${case_id}
 
 Search for property
